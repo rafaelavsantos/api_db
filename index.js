@@ -96,6 +96,64 @@ async function startServer() {
       }
     });
 
+    // Rota para criar um novo cliente
+    app.post('/clientes', (req, res) => {
+      const { nome, sobrenome, endereco, sexo, idade, celular } = req.body;
+      const query = `
+        INSERT INTO cliente (nome, sobrenome, endereco, sexo, idade, celular)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING *;
+      `;
+      const values = [nome, sobrenome, endereco, sexo, idade, celular];
+
+      client.query(query, values, (err, results) => {
+        if (err) {
+          console.error('Erro ao criar cliente:', err);
+          res.status(500).send('Erro ao criar cliente');
+          return;
+        }
+        res.json(results.rows[0]);
+      });
+    });
+
+    // Rota para atualizar um cliente
+    app.put('/clientes/:id', (req, res) => {
+      const { nome, sobrenome, endereco, sexo, idade, celular } = req.body;
+      const { id } = req.params;
+      const query = `
+        UPDATE cliente
+        SET nome = $1, sobrenome = $2, endereco = $3, sexo = $4, idade = $5, celular = $6
+        WHERE id = $7
+        RETURNING *;
+      `;
+      const values = [nome, sobrenome, endereco, sexo, idade, celular, id];
+
+      client.query(query, values, (err, results) => {
+        if (err) {
+          console.error('Erro ao atualizar cliente:', err);
+          res.status(500).send('Erro ao atualizar cliente');
+          return;
+        }
+        res.json(results.rows[0]);
+      });
+    });
+
+    // Rota para deletar um cliente
+    app.delete('/clientes/:id', (req, res) => {
+      const { id } = req.params;
+      const query = 'DELETE FROM cliente WHERE id = $1 RETURNING *;';
+      const values = [id];
+
+      client.query(query, values, (err, results) => {
+        if (err) {
+          console.error('Erro ao deletar cliente:', err);
+          res.status(500).send('Erro ao deletar cliente');
+          return;
+        }
+        res.json(results.rows[0]);
+      });
+    });
+
      // Rota para listar todos os clientes
      app.get('/usuario', async (req, res) => {
       try {
