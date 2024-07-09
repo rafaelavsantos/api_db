@@ -1,16 +1,17 @@
-const { Client } = require('pg');
 const express = require('express');
+const { Client } = require('pg');
 const cors = require('cors');
+
 const app = express();
 const port = 3000;
 
-const dbConfig = new Client({
+const dbConfig = {
   host: 'localhost',
   port: 5432,
   user: 'postgres',
   password: 'postgres',
   database: 'api_db'
-});
+};
 
 const client = new Client(dbConfig);
 
@@ -18,12 +19,13 @@ app.use(cors({
   origin: 'http://localhost:9000'
 }));
 
+app.use(express.json()); // Adiciona middleware para interpretar JSON no corpo das requisições
+
 async function startServer() {
   try {
     await client.connect();
     console.log('Conectando ao banco de dados...');
 
-    // Create table
     const createTables = `
       CREATE TABLE IF NOT EXISTS usuario(
         id SERIAL PRIMARY KEY, 
@@ -63,7 +65,6 @@ async function startServer() {
         id SERIAL PRIMARY KEY, 
         data DATE NOT NULL,
         hora TIME NOT NULL,
-        
         servico_id INTEGER REFERENCES servico(id),
         cliente_id INTEGER REFERENCES cliente(id)
       ); 
@@ -71,7 +72,6 @@ async function startServer() {
         id SERIAL PRIMARY KEY, 
         tipo VARCHAR(20) NOT NULL,
         valor REAL NOT NULL,
-        
         agendamento_id INTEGER REFERENCES agendamento(id)
       );
     `;
@@ -83,15 +83,90 @@ async function startServer() {
       res.send("hello world");
     });
 
+    // Rota para listar todos os agendamentos
+    app.get('/agendamentos', async (req, res) => {
+      try {
+        const query = `
+          SELECT 
+            a.id, 
+            a.data, 
+            a.hora, 
+            c.nome AS cliente, 
+            a.concluido
+          FROM agendamento a
+          JOIN cliente c ON a.cliente_id = c.id
+        `;
+        const result = await client.query(query);
+        res.json(result.rows);
+      } catch (err) {
+        console.error('Erro ao buscar agendamentos:', err);
+        res.status(500).send('Erro ao buscar agendamentos!');
+      }
+    });
+
+    // Rota para criar um novo agendamento
+    app.post('/agendamentos', async (req, res) => {
+      const { data, hora, cliente_id, servico_id } = req.body;
+      const query = `
+        INSERT INTO agendamento (data, hora, cliente_id, servico_id, concluido)
+        VALUES ($1, $2, $3, $4, false)
+        RETURNING *;
+      `;
+      const values = [data, hora, cliente_id, servico_id];
+
+      try {
+        const result = await client.query(query, values);
+        res.json(result.rows[0]);
+      } catch (err) {
+        console.error('Erro ao criar agendamento:', err);
+        res.status(500).send('Erro ao criar agendamento');
+      }
+    });
+
+    // Rota para atualizar um agendamento
+    app.put('/agendamentos/:id', async (req, res) => {
+      const { data, hora, cliente_id, servico_id } = req.body;
+      const { id } = req.params;
+      const query = `
+        UPDATE agendamento
+        SET data = $1, hora = $2, cliente_id = $3, servico_id = $4
+        WHERE id = $5
+        RETURNING *;
+      `;
+      const values = [data, hora, cliente_id, servico_id, id];
+
+      try {
+        const result = await client.query(query, values);
+        res.json(result.rows[0]);
+      } catch (err) {
+        console.error('Erro ao atualizar agendamento:', err);
+        res.status(500).send('Erro ao atualizar agendamento');
+      }
+    });
+
+    // Rota para excluir um agendamento
+    app.delete('/agendamentos/:id', async (req, res) => {
+      const { id } = req.params;
+      const query = 'DELETE FROM agendamento WHERE id = $1 RETURNING *;';
+      const values = [id];
+
+      try {
+        const result = await client.query(query, values);
+        res.json(result.rows[0]);
+      } catch (err) {
+        console.error('Erro ao excluir agendamento:', err);
+        res.status(500).send('Erro ao excluir agendamento');
+      }
+    });
+
     // Rota para listar todos os clientes
     app.get('/clientes', async (req, res) => {
       try {
         const query = 'SELECT * FROM cliente';
         const result = await client.query(query);
-        console.log('Clientes: ', result.rows);
-        res.json(result.rows)
+        res.json(result.rows);
       } catch (err) {
-        console.error('Erro ao buscar clientes: ', err);
+        console.error('Erro ao buscar clientes:', err);
         res.status(500).send('Erro ao buscar clientes!');
       }
     });
@@ -154,16 +229,15 @@ async function startServer() {
       });
     });
 
-     // Rota para listar todos os clientes
-     app.get('/usuario', async (req, res) => {
+    // Rota para listar todos os usuários
+    app.get('/usuarios', async (req, res) => {
       try {
         const query = 'SELECT * FROM usuario';
         const result = await client.query(query);
-        console.log('Usuarios: ', result.rows);
-        res.json(result.rows)
+        res.json(result.rows);
       } catch (err) {
-        console.error('Erro ao buscar usuário: ', err);
-        res.status(500).send('Erro ao buscar usuário!');
+        console.error('Erro ao buscar usuários:', err);
+        res.status(500).send('Erro ao buscar usuários!');
       }
     });
 
@@ -176,7 +250,8 @@ async function startServer() {
     client.end().catch((err) => {
       console.error('Erro ao fechar conexão', err);
     });
-  };
+  }
 }
 
 startServer();
+
