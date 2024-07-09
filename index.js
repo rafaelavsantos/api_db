@@ -1,5 +1,6 @@
 const { Client } = require('pg');
 const express = require('express');
+const cors = require('cors');
 const app = express();
 const port = 3000;
 
@@ -13,6 +14,10 @@ const dbConfig = new Client({
 
 const client = new Client(dbConfig);
 
+app.use(cors({
+  origin: 'http://localhost:9000'
+}));
+
 async function startServer() {
   try {
     await client.connect();
@@ -20,6 +25,11 @@ async function startServer() {
 
     // Create table
     const createTables = `
+      CREATE TABLE IF NOT EXISTS usuario(
+        id SERIAL PRIMARY KEY, 
+        email VARCHAR(50) NOT NULL,
+        password VARCHAR(60)
+      ); 
       CREATE TABLE IF NOT EXISTS cliente(
         id SERIAL PRIMARY KEY, 
         nome VARCHAR(50) NOT NULL,
@@ -83,6 +93,19 @@ async function startServer() {
       } catch (err) {
         console.error('Erro ao buscar clientes: ', err);
         res.status(500).send('Erro ao buscar clientes!');
+      }
+    });
+
+     // Rota para listar todos os clientes
+     app.get('/usuario', async (req, res) => {
+      try {
+        const query = 'SELECT * FROM usuario';
+        const result = await client.query(query);
+        console.log('Usuarios: ', result.rows);
+        res.json(result.rows)
+      } catch (err) {
+        console.error('Erro ao buscar usuário: ', err);
+        res.status(500).send('Erro ao buscar usuário!');
       }
     });
 
