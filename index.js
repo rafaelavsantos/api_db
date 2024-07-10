@@ -66,7 +66,8 @@ async function startServer() {
         data DATE NOT NULL,
         hora TIME NOT NULL,
         servico_id INTEGER REFERENCES servico(id),
-        cliente_id INTEGER REFERENCES cliente(id)
+        cliente_id INTEGER REFERENCES cliente(id),
+        concluido BOOLEAN DEFAULT false
       ); 
       CREATE TABLE IF NOT EXISTS pagamento (
         id SERIAL PRIMARY KEY, 
@@ -87,14 +88,7 @@ async function startServer() {
     app.get('/agendamentos', async (req, res) => {
       try {
         const query = `
-          SELECT 
-            a.id, 
-            a.data, 
-            a.hora, 
-            c.nome AS cliente, 
-            a.concluido
-          FROM agendamento a
-          JOIN cliente c ON a.cliente_id = c.id
+          SELECT * FROM agendamentoS
         `;
         const result = await client.query(query);
         res.json(result.rows);
@@ -125,15 +119,21 @@ async function startServer() {
 
     // Rota para atualizar um agendamento
     app.put('/agendamentos/:id', async (req, res) => {
-      const { data, hora, cliente_id, servico_id } = req.body;
+      const { data, hora, cliente_id, servico_id, concluido } = req.body;
       const { id } = req.params;
+
+      // Verifica se os campos obrigatórios estão presentes
+      if (!data || !hora || !cliente_id || !servico_id) {
+        return res.status(400).send('Data, hora, cliente_id e servico_id são obrigatórios');
+      }
+
       const query = `
         UPDATE agendamento
-        SET data = $1, hora = $2, cliente_id = $3, servico_id = $4
-        WHERE id = $5
+        SET data = $1, hora = $2, cliente_id = $3, servico_id = $4, concluido = $5
+        WHERE id = $6
         RETURNING *;
       `;
-      const values = [data, hora, cliente_id, servico_id, id];
+      const values = [data, hora, cliente_id, servico_id, concluido, id];
 
       try {
         const result = await client.query(query, values);
@@ -254,4 +254,3 @@ async function startServer() {
 }
 
 startServer();
-
