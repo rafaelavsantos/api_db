@@ -88,7 +88,7 @@ async function startServer() {
     app.get('/agendamentos', async (req, res) => {
       try {
         const query = `
-          SELECT * FROM agendamentoS
+          SELECT * FROM agendamento
         `;
         const result = await client.query(query);
         res.json(result.rows);
@@ -101,13 +101,14 @@ async function startServer() {
     // Rota para criar um novo agendamento
     app.post('/agendamentos', async (req, res) => {
       const { data, hora, cliente_id, servico_id } = req.body;
+      console.log('Received data:', { data, hora, cliente_id, servico_id }); // Adicione este log para depuração
       const query = `
         INSERT INTO agendamento (data, hora, cliente_id, servico_id, concluido)
         VALUES ($1, $2, $3, $4, false)
         RETURNING *;
       `;
       const values = [data, hora, cliente_id, servico_id];
-
+    
       try {
         const result = await client.query(query, values);
         res.json(result.rows[0]);
