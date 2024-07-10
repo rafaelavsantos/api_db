@@ -230,17 +230,194 @@ async function startServer() {
       });
     });
 
-    // Rota para listar todos os usuários
-    app.get('/usuarios', async (req, res) => {
-      try {
-        const query = 'SELECT * FROM usuario';
-        const result = await client.query(query);
-        res.json(result.rows);
-      } catch (err) {
-        console.error('Erro ao buscar usuários:', err);
-        res.status(500).send('Erro ao buscar usuários!');
-      }
-    });
+   
+    // Rota para listar todos os administradores
+app.get('/usuarios', async (req, res) => {
+  try {
+    const query = 'SELECT * FROM usuario';
+    const result = await client.query(query);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Erro ao buscar usuários:', err);
+    res.status(500).send('Erro ao buscar usuários!');
+  }
+});
+
+// Rota para criar um novo administrador
+app.post('/usuarios', async (req, res) => {
+  const { email, password } = req.body;
+  const query = `
+    INSERT INTO usuario (email, password)
+    VALUES ($1, $2)
+    RETURNING *;
+  `;
+  const values = [email, password];
+
+  try {
+    const result = await client.query(query, values);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Erro ao criar usuário:', err);
+    res.status(500).send('Erro ao criar usuário');
+  }
+});
+
+// Rota para excluir um administrador
+app.delete('/usuarios/:id', async (req, res) => {
+  const { id } = req.params;
+  const query = 'DELETE FROM usuario WHERE id = $1 RETURNING *;';
+  const values = [id];
+
+  try {
+    const result = await client.query(query, values);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Erro ao excluir usuário:', err);
+    res.status(500).send('Erro ao excluir usuário');
+  }
+});
+
+// Rota para listar todos os funcionários
+app.get('/funcionarios', async (req, res) => {
+  try {
+    const query = 'SELECT * FROM funcionario';
+    const result = await client.query(query);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Erro ao buscar funcionários:', err);
+    res.status(500).send('Erro ao buscar funcionários!');
+  }
+});
+
+// Rota para criar um novo funcionário
+app.post('/funcionarios', (req, res) => {
+  const { nome, sobrenome, endereco, sexo, idade, celular, dt_nasc, funcao, cpf } = req.body;
+  const query = `
+    INSERT INTO funcionario (nome, sobrenome, endereco, sexo, idade, celular, dt_nasc, funcao, cpf)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    RETURNING *;
+  `;
+  const values = [nome, sobrenome, endereco, sexo, idade, celular, dt_nasc, funcao, cpf];
+
+  client.query(query, values, (err, results) => {
+    if (err) {
+      console.error('Erro ao criar funcionário:', err);
+      res.status(500).send('Erro ao criar funcionário');
+      return;
+    }
+    res.json(results.rows[0]);
+  });
+});
+
+// Rota para atualizar um funcionário
+app.put('/funcionarios/:id', (req, res) => {
+  const { nome, sobrenome, endereco, sexo, idade, celular, dt_nasc, funcao, cpf } = req.body;
+  const { id } = req.params;
+  const query = `
+    UPDATE funcionario
+    SET nome = $1, sobrenome = $2, endereco = $3, sexo = $4, idade = $5, celular = $6, dt_nasc = $7, funcao = $8, cpf = $9
+    WHERE id = $10
+    RETURNING *;
+  `;
+  const values = [nome, sobrenome, endereco, sexo, idade, celular, dt_nasc, funcao, cpf, id];
+
+  client.query(query, values, (err, results) => {
+    if (err) {
+      console.error('Erro ao atualizar funcionário:', err);
+      res.status(500).send('Erro ao atualizar funcionário');
+      return;
+    }
+    res.json(results.rows[0]);
+  });
+});
+
+// Rota para deletar um funcionário
+app.delete('/funcionarios/:id', (req, res) => {
+  const { id } = req.params;
+  const query = 'DELETE FROM funcionario WHERE id = $1 RETURNING *;';
+  const values = [id];
+
+  client.query(query, values, (err, results) => {
+    if (err) {
+      console.error('Erro ao deletar funcionário:', err);
+      res.status(500).send('Erro ao deletar funcionário');
+      return;
+    }
+    res.json(results.rows[0]);
+  });
+});
+
+// Rota para listar todos os serviços
+app.get('/servicos', async (req, res) => {
+  try {
+    const query = 'SELECT * FROM servico';
+    const result = await client.query(query);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Erro ao buscar serviços:', err);
+    res.status(500).send('Erro ao buscar serviços!');
+  }
+});
+
+// Rota para criar um novo serviço
+app.post('/servicos', (req, res) => {
+  const { tipo, valor_servico, quantidade, duracao, funcionario_id } = req.body;
+  const query = `
+    INSERT INTO servico (tipo, valor_servico, quantidade, duracao, funcionario_id)
+    VALUES ($1, $2, $3, $4, $5)
+    RETURNING *;
+  `;
+  const values = [tipo, valor_servico, quantidade, duracao, funcionario_id];
+
+  client.query(query, values, (err, results) => {
+    if (err) {
+      console.error('Erro ao criar serviço:', err);
+      res.status(500).send('Erro ao criar serviço');
+      return;
+    }
+    res.json(results.rows[0]);
+  });
+});
+
+// Rota para atualizar um serviço
+app.put('/servicos/:id', (req, res) => {
+  const { tipo, valor_servico, quantidade, duracao, funcionario_id } = req.body;
+  const { id } = req.params;
+  const query = `
+    UPDATE servico
+    SET tipo = $1, valor_servico = $2, quantidade = $3, duracao = $4, funcionario_id = $5
+    WHERE id = $6
+    RETURNING *;
+  `;
+  const values = [tipo, valor_servico, quantidade, duracao, funcionario_id, id];
+
+  client.query(query, values, (err, results) => {
+    if (err) {
+      console.error('Erro ao atualizar serviço:', err);
+      res.status(500).send('Erro ao atualizar serviço');
+      return;
+    }
+    res.json(results.rows[0]);
+  });
+});
+
+// Rota para deletar um serviço
+app.delete('/servicos/:id', (req, res) => {
+  const { id } = req.params;
+  const query = 'DELETE FROM servico WHERE id = $1 RETURNING *;';
+  const values = [id];
+
+  client.query(query, values, (err, results) => {
+    if (err) {
+      console.error('Erro ao deletar serviço:', err);
+      res.status(500).send('Erro ao deletar serviço');
+      return;
+    }
+    res.json(results.rows[0]);
+  });
+});
+
+
 
     // Iniciar o servidor
     app.listen(port, () => {
